@@ -126,6 +126,8 @@ public class Main {
         String fileDirectory = "C:/Users/fam/Documents/UM/Research/TPTP-v8.2.0/Problems";
 //        fileDirectory = "/Users/geoff/MyDocuments/Development/ATPProgress/Problems";
         String outputFile = "output_data.csv";
+        String nothingBefore = "v4.0.0"; //----Do not keep data before this release
+        String fillLessThan1Before = "v5.0.0"; //----Can fill with rating < 1.00 before this release
         Set<String> versions = new HashSet<>(); // Use this to create non-repetitive columns in csv *MISSING SOME*
         List<DataEntry> entries = collectData(fileDirectory, versions);
 

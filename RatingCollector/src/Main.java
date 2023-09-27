@@ -5,7 +5,7 @@ public class Main {
 
 
     private static void writeToCSV(List<DataEntry> entries, Set<String> versionSet, String outputFile) {
-        List<String> versions = new ArrayList<>(versionSet.stream().toList());
+        List<String> versions = new ArrayList<>(versionSet);
         Collections.sort(versions);
         Collections.reverse(versions);
 
@@ -124,6 +124,7 @@ public class Main {
 
     public static void main(String[] args) {
         String fileDirectory = "C:/Users/fam/Documents/UM/Research/TPTP-v8.2.0/Problems";
+//        fileDirectory = "/Users/geoff/MyDocuments/Development/ATPProgress/Problems";
         String outputFile = "output_data.csv";
         Set<String> versions = new HashSet<>(); // Use this to create non-repetitive columns in csv *MISSING SOME*
         List<DataEntry> entries = collectData(fileDirectory, versions);

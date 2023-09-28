@@ -113,8 +113,8 @@ public class Main {
                         DataEntry entry = new DataEntry(domain, file.getName(), data.spc, data.ratingsVersions);
                         entries.add(entry);
                         counter++;
-//                        if (counter > 500)
-//                            return entries;
+                        if (counter > 500)
+                            return entries;
                     }
                 }
             }
@@ -140,8 +140,8 @@ public class Main {
                     + entry.ratingsVersions.keySet() + " : " + entry.ratingsVersions.entrySet());
         }
 
-        for (String version : versions)
-            System.out.println(version);
+//        for (String version : versions)
+//            System.out.println(version);
 
         writeToCSV(entries, versions, outputFile);
 

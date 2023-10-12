@@ -1,8 +1,73 @@
 import java.util.*;
 import java.io.*;
+import java.util.stream.Collectors;
 
 public class Main {
 
+    private static boolean hasMissingDataAfterVersion(DataEntry entry, String version) {
+        List<String> versions = new ArrayList<>(entry.ratingsVersions.keySet());
+        Collections.sort(versions);
+
+        // Find the index of the given version
+        int startIndex = versions.indexOf(version);
+
+        // If version doesn't exist in the list, then we assume the data is missing for that version
+        if (startIndex == -1) {
+            return true;
+        }
+
+        for (int i = startIndex; i < versions.size(); i++) {
+            // If the rating in that version is empty, then return true.
+            if (entry.ratingsVersions.get(versions.get(i)).isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void removeOldData(String outputFile, String nothingBefore) {
+        List<String> adjustedLines = new ArrayList<>();
+        try (BufferedReader reader = new BufferedReader(new FileReader(outputFile))) {
+            String header = reader.readLine();
+            if (header != null) {
+                String[] headerColumns = header.split(",");
+                adjustedLines.add(header);  // add header as is
+                List<Integer> columnsToRemove = new ArrayList<>();
+                // Start from the 4th column since the first 3 are not version columns.
+                for (int i = 3; i < headerColumns.length; i++) {
+                    if (headerColumns[i].compareTo(nothingBefore) < 0) { // if version is before "v4.0.0"
+                        columnsToRemove.add(i);
+                    }
+                }
+
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    String[] values = line.split(",");
+                    StringBuilder adjustedLine = new StringBuilder();
+                    for (int i = 0; i < values.length; i++) {
+                        if (!columnsToRemove.contains(i)) {
+                            if (adjustedLine.length() > 0) {
+                                adjustedLine.append(",");
+                            }
+                            adjustedLine.append(values[i]);
+                        }
+                    }
+                    adjustedLines.add(adjustedLine.toString());
+                }
+            }
+        } catch (IOException e) {
+            System.out.println("Error reading CSV : " + e.getMessage());
+        }
+
+        // Now, rewrite the CSV with the adjusted lines
+        try (FileWriter writer = new FileWriter(outputFile)) {
+            for (String line : adjustedLines) {
+                writer.write(line + "\n");
+            }
+        } catch (IOException e) {
+            System.out.println("Error writing adjusted CSV : " + e.getMessage());
+        }
+    }
 
     private static void writeToCSV(List<DataEntry> entries, Set<String> versionSet, String outputFile) {
         List<String> versions = new ArrayList<>(versionSet);
@@ -40,7 +105,6 @@ public class Main {
         }
     }
 
-
     private static List<String> getDomains(String fileDirectory) {
         List<String> domainNames = new ArrayList<>();
         File directory = new File(fileDirectory);
@@ -63,7 +127,6 @@ public class Main {
             if (parts.length != 2) {
                 continue;
             }
-
 
 //            Double num = Double.valueOf(parts[0]);
             String rating = parts[0].trim().replaceAll("[^ .,a-zA-Z0-9]","");
@@ -93,10 +156,6 @@ public class Main {
         return data;
     }
 
-
-
-
-
     private static List<DataEntry> collectData(String fileDirectory, Set<String> versions) {
         List<DataEntry> entries = new ArrayList<>();
         List<String> domains = getDomains(fileDirectory);
@@ -113,8 +172,8 @@ public class Main {
                         DataEntry entry = new DataEntry(domain, file.getName(), data.spc, data.ratingsVersions);
                         entries.add(entry);
                         counter++;
-                        if (counter > 500)
-                            return entries;
+//                        if (counter > 1000)
+//                            return entries;
                     }
                 }
             }
@@ -123,7 +182,7 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        String fileDirectory = "C:/Users/fam/Documents/UM/Research/TPTP-v8.2.0/Problems";
+        String fileDirectory = "C:/Users/fam/Documents/UM/TPTPRESEARCH/TPTPOrganizer/TPTP-v8.2.0/Problems";
 //        fileDirectory = "/Users/geoff/MyDocuments/Development/ATPProgress/Problems";
         String outputFile = "output_data.csv";
         String nothingBefore = "v4.0.0"; //----Do not keep data before this release
@@ -131,21 +190,44 @@ public class Main {
         Set<String> versions = new HashSet<>(); // Use this to create non-repetitive columns in csv *MISSING SOME*
         List<DataEntry> entries = collectData(fileDirectory, versions);
 
-        for (DataEntry entry : entries) {
-//            System.out.println("ENTRY : " + entry);
-//            System.out.println("ENTRY : RATINGS_VERSION : HASHMAP : " + entry.ratingsVersions);
-//            System.out.println("ENTRY : RATINGS_VERSIONS : KEYSET : " + entry.ratingsVersions.keySet());
-//            System.out.println("ENTRY : RATINGS_VERSIONS : ENTRYSET : " + entry.ratingsVersions.entrySet());
-            System.out.println("FULL DATA : " + entry.domain + " : " + entry.problem + " : " + entry.spc + " : "
-                    + entry.ratingsVersions.keySet() + " : " + entry.ratingsVersions.entrySet());
-        }
+//        for (DataEntry entry : entries) {
+//            System.out.println("FULL DATA : " + entry.domain + " : " + entry.problem + " : " + entry.spc + " : "
+//                    + entry.ratingsVersions.keySet() + " : " + entry.ratingsVersions.entrySet());
+//            System.out.println(entries);
+//        }
 
-//        for (String version : versions)
-//            System.out.println(version);
+        /*
+        Break down of the following code:
+        - DataEntry: objects that do not have missing data after v4.0.0 will be kept.
+        - entries.stream(): allows us to perform a sequence of computations on each item in the list.
+        - .filter(entry -> !hasMissingDataAfterVersion(entry, nothingBefore)):  filters using the lambda function.
+            It retains only versions after v4.0.0
+        - .collect(Collectors.toList()): returns the new results back into list
+         */
+        List<DataEntry> filteredEntries = entries.stream()
+                .filter(entry -> !hasMissingDataAfterVersion(entry, nothingBefore))
+                .collect(Collectors.toList());
 
-        writeToCSV(entries, versions, outputFile);
+        writeToCSV(filteredEntries, versions, outputFile);
 
+//        writeToCSV(entries, versions, outputFile);
+        removeOldData(outputFile, nothingBefore);
     }
+
+    /*
+    Release v8.1.1, Fri Oct 7 12:13:23 EDT 2022
+    Release v8.1.0, Sat Jul 30 18:16:58 EDT 2022
+    Release v8.0.0, Tue Apr 19 11:02:31 EDT 2022
+    Release v7.5.0, Tue Jul 13 12:56:51 EDT 2021
+    Release v7.4.0, Wed Jun 10 15:43:32 EDT 2020
+    Release v7.3.0, Fri Aug 2 16:17:10 EDT 2019
+    Release v7.2.0, Tue Jul 10 11:20:43 EDT 2018
+    Release v7.1.0, Tue Mar 6 12:00:10 EST 2018
+    Release v7.0.0, Mon Jul 24 17:36:26 EDT 2017
+    Release v6.4.0, Mon Jun 13 09:59:56 EDT 2016
+    Release v6.3.0, Sat Nov 28 16:04:51 EST 2015
+    Release v6.2.0, Tue Jul 14 10:21:30 EDT 2015
+     */
 
 }
 

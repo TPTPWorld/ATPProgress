@@ -8,6 +8,8 @@ public class DataEntry {
     String problem;
     String spc;
     Map<String, String> ratingsVersions;
+    String nothingBefore = "v4.0.0";
+    String fillLessThan1Before = "v5.0.0";
 
     /**
      * Initializes the fields with provided parameters
@@ -71,6 +73,14 @@ public class DataEntry {
             if (prevRating.isEmpty() && currentRating.equals("1.00")) {
                 ratingsVersions.put(prevVersion, currentRating);
                 newLists.add(i, currentRating);
+            }
+            // if the currentRating is not equal to 1.00 and current version is between v4.0.0 and v5.0.0
+            else if (!currentRating.equals("1.00") && currentVersion.compareTo(fillLessThan1Before) <= 0 && currentVersion.compareTo(nothingBefore) >= 0) {
+                // if current rating is not empty and previous rating is empty, put the current rating in the previous rating
+                if (!currentRating.isEmpty() && prevRating.isEmpty()) {
+                    ratingsVersions.put(prevVersion, currentRating);
+                    newLists.add(i, currentRating);
+                }
             }
         }
 

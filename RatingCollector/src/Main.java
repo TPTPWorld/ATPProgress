@@ -4,36 +4,39 @@ import java.util.stream.Collectors;
 
 public class Main {
 
-    public static final String TPTP_PROBLEMS_DIRECTORY =
-// "C:/Users/fam/Documents/UM/TPTPRESEARCH/TPTPOrganizer/TPTP-v8.2.0/Problems";
-"/Users/geoff/MyDocuments/Development/ATPProgress/Problems";
-    public static final String OUTPUT_CSV_FILE = "output_data.csv";
+    private static final String CWD = "/Users/geoff/MyDocuments/Development/ATPProgress";
+// "C:/Users/fam/Documents/UM/TPTPRESEARCH/TPTPOrganizer
+    public static final String TPTP_PROBLEMS_DIRECTORY = CWD + "/TPTP-v8.2.0/Problems";
+    public static final String OUTPUT_CSV_FILE = CWD + "/output_data.csv";
     public static final String NOTHING_BEFORE = "v6.2.0"; //----Do not keep data before this release
     public static final String FILL_1_BEFORE = "v7.3.0";
     public static final String FILL_LESS_THAN_1_BEFORE = "v7.3.0"; //----Can fill with rating < 1.00 before this release
 
-    private static boolean hasMissingDataAfterVersion(DataEntry entry, String version) {
+    private static boolean hasMissingDataAfterVersion(DataEntry entry) {
         List<String> versions = new ArrayList<>(entry.ratingsVersions.keySet());
         Collections.sort(versions);
 
+        System.out.println("Check that there is all the data for "+entry.problem);
         // Find the index of the given version
-        int startIndex = versions.indexOf(version);
+        int lastIndex = versions.indexOf(NOTHING_BEFORE);
 
         // If version doesn't exist in the list, then we assume the data is missing for that version
-        if (startIndex == -1) {
+        if (lastIndex == -1) {
+            System.out.println("No column for " + entry.problem + " at " + NOTHING_BEFORE);
             return true;
         }
 
-        for (int i = startIndex; i < versions.size(); i++) {
+        for (int versionIndex = lastIndex; versionIndex < versions.size(); versionIndex++) {
             // If the rating in that version is empty, then return true.
-            if (entry.ratingsVersions.get(versions.get(i)).isEmpty()) {
+            if (entry.ratingsVersions.get(versions.get(versionIndex)).isEmpty()) {
+                System.out.println("Problem "+entry.problem + " missing data for " + versions.get(versionIndex));
                 return true;
             }
         }
         return false;
     }
 
-    private static void removeOldData(String OUTPUT_CSV_FILE, String NOTHING_BEFORE) {
+    private static void removeOldData() {
         List<String> adjustedLines = new ArrayList<>();
         try (BufferedReader reader = new BufferedReader(new FileReader(OUTPUT_CSV_FILE))) {
             String header = reader.readLine();
@@ -77,7 +80,7 @@ public class Main {
         }
     }
 
-    private static void writeToCSV(List<DataEntry> entries, Set<String> versionSet, String OUTPUT_CSV_FILE) {
+    private static void writeToCSV(List<DataEntry> entries, Set<String> versionSet) {
         List<String> versions = new ArrayList<>(versionSet);
         Collections.sort(versions);
         Collections.reverse(versions);
@@ -113,7 +116,7 @@ public class Main {
         }
     }
 
-    private static List<String> getDomains(String TPTP_PROBLEMS_DIRECTORY) {
+    private static List<String> getDomains() {
         List<String> domainNames = new ArrayList<>();
         File directory = new File(TPTP_PROBLEMS_DIRECTORY);
         if (directory.isDirectory()) {
@@ -153,7 +156,7 @@ public class Main {
 
                 if (line.startsWith("% SPC      : ")) {
                     data.spc = line.replace("% SPC      : ", "").trim();
-                    System.out.println("SUCCESS : SPC : " + data.spc);
+//DEBUG System.out.println("SUCCESS : SPC : " + data.spc);
                 } else if (line.startsWith("% Rating   : ")) { // "0.01 v8.10, 0.02 v7.9.9"
                     parseRatingsAndVersions(line, data);
                 }
@@ -164,9 +167,9 @@ public class Main {
         return data;
     }
 
-    private static List<DataEntry> collectData(String TPTP_PROBLEMS_DIRECTORY, Set<String> versions) {
+    private static List<DataEntry> collectData(Set<String> versions) {
         List<DataEntry> entries = new ArrayList<>();
-        List<String> domains = getDomains(TPTP_PROBLEMS_DIRECTORY);
+        List<String> domains = getDomains();
         int counter = 0;
         for (String domain : domains) {
             String newDirectory = TPTP_PROBLEMS_DIRECTORY + "/" + domain;
@@ -191,7 +194,7 @@ public class Main {
 
     public static void main(String[] args) {
         Set<String> versions = new HashSet<>(); // Use this to create non-repetitive columns in csv *MISSING SOME*
-        List<DataEntry> entries = collectData(TPTP_PROBLEMS_DIRECTORY, versions);
+        List<DataEntry> entries = collectData(versions);
 
 //        for (DataEntry entry : entries) {
 //            System.out.println("FULL DATA : " + entry.domain + " : " + entry.problem + " : " + entry.spc + " : "
@@ -208,13 +211,13 @@ public class Main {
         - .collect(Collectors.toList()): returns the new results back into list
          */
         List<DataEntry> filteredEntries = entries.stream()
-                .filter(entry -> !hasMissingDataAfterVersion(entry, NOTHING_BEFORE))
+                .filter(entry -> !hasMissingDataAfterVersion(entry))
                 .collect(Collectors.toList());
 
-        writeToCSV(filteredEntries, versions, OUTPUT_CSV_FILE);
+        writeToCSV(filteredEntries, versions);
 
-//        writeToCSV(entries, versions, OUTPUT_CSV_FILE);
-        removeOldData(OUTPUT_CSV_FILE, NOTHING_BEFORE);
+//        writeToCSV(entries, versions);
+//        removeOldData();
     }
 
     /*

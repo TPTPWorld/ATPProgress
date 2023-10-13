@@ -4,6 +4,14 @@ import java.util.stream.Collectors;
 
 public class Main {
 
+    public static final String TPTP_PROBLEMS_DIRECTORY =
+// "C:/Users/fam/Documents/UM/TPTPRESEARCH/TPTPOrganizer/TPTP-v8.2.0/Problems";
+"/Users/geoff/MyDocuments/Development/ATPProgress/Problems";
+    public static final String OUTPUT_CSV_FILE = "output_data.csv";
+    public static final String NOTHING_BEFORE = "v6.2.0"; //----Do not keep data before this release
+    public static final String FILL_1_BEFORE = "v7.3.0";
+    public static final String FILL_LESS_THAN_1_BEFORE = "v7.3.0"; //----Can fill with rating < 1.00 before this release
+
     private static boolean hasMissingDataAfterVersion(DataEntry entry, String version) {
         List<String> versions = new ArrayList<>(entry.ratingsVersions.keySet());
         Collections.sort(versions);
@@ -25,9 +33,9 @@ public class Main {
         return false;
     }
 
-    private static void removeOldData(String outputFile, String nothingBefore) {
+    private static void removeOldData(String OUTPUT_CSV_FILE, String NOTHING_BEFORE) {
         List<String> adjustedLines = new ArrayList<>();
-        try (BufferedReader reader = new BufferedReader(new FileReader(outputFile))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(OUTPUT_CSV_FILE))) {
             String header = reader.readLine();
             if (header != null) {
                 String[] headerColumns = header.split(",");
@@ -35,7 +43,7 @@ public class Main {
                 List<Integer> columnsToRemove = new ArrayList<>();
                 // Start from the 4th column since the first 3 are not version columns.
                 for (int i = 3; i < headerColumns.length; i++) {
-                    if (headerColumns[i].compareTo(nothingBefore) < 0) { // if version is before "v4.0.0"
+                    if (headerColumns[i].compareTo(NOTHING_BEFORE) < 0) { // if version is before "v4.0.0"
                         columnsToRemove.add(i);
                     }
                 }
@@ -60,7 +68,7 @@ public class Main {
         }
 
         // Now, rewrite the CSV with the adjusted lines
-        try (FileWriter writer = new FileWriter(outputFile)) {
+        try (FileWriter writer = new FileWriter(OUTPUT_CSV_FILE)) {
             for (String line : adjustedLines) {
                 writer.write(line + "\n");
             }
@@ -69,14 +77,14 @@ public class Main {
         }
     }
 
-    private static void writeToCSV(List<DataEntry> entries, Set<String> versionSet, String outputFile) {
+    private static void writeToCSV(List<DataEntry> entries, Set<String> versionSet, String OUTPUT_CSV_FILE) {
         List<String> versions = new ArrayList<>(versionSet);
         Collections.sort(versions);
         Collections.reverse(versions);
 
         Map<String, Integer> versionCounts = new HashMap<>(); // Map to store the count of each version
 
-        try (FileWriter writer = new FileWriter(outputFile)) {
+        try (FileWriter writer = new FileWriter(OUTPUT_CSV_FILE)) {
             writer.write("Domain,Problem,SPC");
             for (String version : versions)
                 writer.write("," + version);
@@ -105,9 +113,9 @@ public class Main {
         }
     }
 
-    private static List<String> getDomains(String fileDirectory) {
+    private static List<String> getDomains(String TPTP_PROBLEMS_DIRECTORY) {
         List<String> domainNames = new ArrayList<>();
-        File directory = new File(fileDirectory);
+        File directory = new File(TPTP_PROBLEMS_DIRECTORY);
         if (directory.isDirectory()) {
             File[] files = directory.listFiles();
             if (files != null) {
@@ -156,12 +164,12 @@ public class Main {
         return data;
     }
 
-    private static List<DataEntry> collectData(String fileDirectory, Set<String> versions) {
+    private static List<DataEntry> collectData(String TPTP_PROBLEMS_DIRECTORY, Set<String> versions) {
         List<DataEntry> entries = new ArrayList<>();
-        List<String> domains = getDomains(fileDirectory);
+        List<String> domains = getDomains(TPTP_PROBLEMS_DIRECTORY);
         int counter = 0;
         for (String domain : domains) {
-            String newDirectory = fileDirectory + "/" + domain;
+            String newDirectory = TPTP_PROBLEMS_DIRECTORY + "/" + domain;
             File directory = new File(newDirectory);
             if (directory.isDirectory()) {
                 File[] files = directory.listFiles();
@@ -182,13 +190,8 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        String fileDirectory = "C:/Users/fam/Documents/UM/TPTPRESEARCH/TPTPOrganizer/TPTP-v8.2.0/Problems";
-//        fileDirectory = "/Users/geoff/MyDocuments/Development/ATPProgress/Problems";
-        String outputFile = "output_data.csv";
-        String nothingBefore = "v4.0.0"; //----Do not keep data before this release
-        String fillLessThan1Before = "v5.0.0"; //----Can fill with rating < 1.00 before this release
         Set<String> versions = new HashSet<>(); // Use this to create non-repetitive columns in csv *MISSING SOME*
-        List<DataEntry> entries = collectData(fileDirectory, versions);
+        List<DataEntry> entries = collectData(TPTP_PROBLEMS_DIRECTORY, versions);
 
 //        for (DataEntry entry : entries) {
 //            System.out.println("FULL DATA : " + entry.domain + " : " + entry.problem + " : " + entry.spc + " : "
@@ -200,18 +203,18 @@ public class Main {
         Break down of the following code:
         - DataEntry: objects that do not have missing data after v4.0.0 will be kept.
         - entries.stream(): allows us to perform a sequence of computations on each item in the list.
-        - .filter(entry -> !hasMissingDataAfterVersion(entry, nothingBefore)):  filters using the lambda function.
+        - .filter(entry -> !hasMissingDataAfterVersion(entry, NOTHING_BEFORE)):  filters using the lambda function.
             It retains only versions after v4.0.0
         - .collect(Collectors.toList()): returns the new results back into list
          */
         List<DataEntry> filteredEntries = entries.stream()
-                .filter(entry -> !hasMissingDataAfterVersion(entry, nothingBefore))
+                .filter(entry -> !hasMissingDataAfterVersion(entry, NOTHING_BEFORE))
                 .collect(Collectors.toList());
 
-        writeToCSV(filteredEntries, versions, outputFile);
+        writeToCSV(filteredEntries, versions, OUTPUT_CSV_FILE);
 
-//        writeToCSV(entries, versions, outputFile);
-        removeOldData(outputFile, nothingBefore);
+//        writeToCSV(entries, versions, OUTPUT_CSV_FILE);
+        removeOldData(OUTPUT_CSV_FILE, NOTHING_BEFORE);
     }
 
     /*

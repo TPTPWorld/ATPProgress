@@ -8,8 +8,6 @@ public class DataEntry {
     String problem;
     String spc;
     Map<String, String> ratingsVersions;
-    String nothingBefore = "v4.0.0";
-    String fillLessThan1Before = "v5.0.0";
 
     /**
      * Initializes the fields with provided parameters
@@ -37,21 +35,20 @@ public class DataEntry {
         StringBuilder sb = new StringBuilder();
         List<String> newLists = new ArrayList<>(Collections.nCopies(versions.size(), ""));
 
-        // backwards for loop going through the versions list
-        for (int i = versions.size() - 1; i >= 0; i--) {
+// backwards for loop going through the versions list to fill ratings that are omitted because they have not changed
+        for (int i = versions.size()-1; i >= 1; i--) {
             String currentVersion = versions.get(i);
             String currentRating = ratingsVersions.getOrDefault(currentVersion, "");
-            String nextVersion = i > 0 ? versions.get(i -1) : currentVersion;
+            String nextVersion = versions.get(i-1);
             String nextRating = ratingsVersions.getOrDefault(nextVersion, "");
-            String prevVersion = i < versions.size() - 1  ? versions.get(i + 1) : currentVersion;
-            String prevRating = ratingsVersions.getOrDefault(prevVersion, "");
 
-            // if current rating is not empty and next rating is not empty and the next rating is larger than the current rating
-            if (!currentRating.isEmpty() && !nextRating.isEmpty() && Double.parseDouble(nextRating) > Double.parseDouble(currentRating)) {
+// if current rating is not empty and next rating is not empty and the next rating is larger than the current rating
+            if (!currentRating.isEmpty() && !nextRating.isEmpty() &&
+Double.parseDouble(nextRating) > Double.parseDouble(currentRating)) {
                 ratingsVersions.put(nextVersion, currentRating);
                 newLists.set(i, currentRating); // adding it to a newList
             }
-            // else if the current rating is not empty and not equal to one and nextRating is empty
+// else if the current rating is not empty and nextRating is empty
             else if (!currentRating.isEmpty() && nextRating.isEmpty()) {
                 ratingsVersions.put(nextVersion, currentRating);
                 newLists.set(i, currentRating);
@@ -59,28 +56,27 @@ public class DataEntry {
             else {
                 newLists.set(i, currentRating);
             }
-
         }
 
-        // Loops from the newest versions to the oldest versions
-        for (int i = 0; i < versions.size(); i++) {
+// Loops from the newest versions to the oldest versions filling in ratings before problem added to TPTP
+        for (int i = 0; i < versions.size()-1; i++) {
             String currentVersion = versions.get(i);
             String currentRating = ratingsVersions.getOrDefault(currentVersion, "");
-            String prevVersion = i < versions.size() - 1 ? versions.get(i + 1) : currentVersion;
+            String prevVersion = versions.get(i+1);
             String prevRating = ratingsVersions.getOrDefault(prevVersion, "");
 
-            // if the previous rating is empty and the current is 1.00, fill previous with 1.00
-            if (prevRating.isEmpty() && currentRating.equals("1.00")) {
+// if the current rating is 1.00 and the previous rating is empty and can take 1.00, fill
+            if (prevRating.isEmpty() && currentRating.equals("1.00") &&
+prevVersion.compareTo(Main.FILL_1_BEFORE) <= 0 && prevVersion.compareTo(Main.NOTHING_BEFORE) >= 0) {
                 ratingsVersions.put(prevVersion, currentRating);
                 newLists.add(i, currentRating);
             }
-            // if the currentRating is not equal to 1.00 and current version is between v4.0.0 and v5.0.0
-            else if (!currentRating.equals("1.00") && currentVersion.compareTo(fillLessThan1Before) <= 0 && currentVersion.compareTo(nothingBefore) >= 0) {
-                // if current rating is not empty and previous rating is empty, put the current rating in the previous rating
-                if (!currentRating.isEmpty() && prevRating.isEmpty()) {
-                    ratingsVersions.put(prevVersion, currentRating);
-                    newLists.add(i, currentRating);
-                }
+// if the current rating is not 1.00 (must be less) and previous version is empty and can take less than 1.00, fill
+            else if (prevRating.isEmpty() && !currentRating.equals("1.00") &&
+prevVersion.compareTo(Main.FILL_LESS_THAN_1_BEFORE) <= 0 &&
+prevVersion.compareTo(Main.NOTHING_BEFORE) >= 0) {
+                ratingsVersions.put(prevVersion, currentRating);
+                newLists.add(i, currentRating);
             }
         }
 

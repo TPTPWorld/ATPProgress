@@ -1,4 +1,5 @@
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Represents a data entry with fields for domain, problem, spc, and a map of ratingsVersions.
@@ -7,7 +8,7 @@ public class DataEntry {
     String domain;
     String problem;
     String spc;
-    Map<String, String> ratingsVersions;
+    Map<String, Double> ratingsVersions;
 
     /**
      * Initializes the fields with provided parameters
@@ -18,72 +19,62 @@ public class DataEntry {
      * @param ratingsVersions   a map where the keys are the version strings and values are the ratings strings
      */
 
-    public DataEntry(String domain, String problem, String spc, Map<String, String> ratingsVersions) {
+    public DataEntry(String domain, String problem, String spc, Map<String, Double> ratingsVersions) {
         this.domain = domain;
         this.problem = problem;
         this.spc = spc;
         this.ratingsVersions = ratingsVersions;
     }
 
-    /**
-     * Converts data entry to a CSV file based on strings from versions list
-     *
-     * @param versions          a list of version strings
-     * @return a CSV string representation of the data entry
-     */
     public String toCSV(List<String> versions) {
+
         StringBuilder sb = new StringBuilder();
-        List<String> newLists = new ArrayList<>(Collections.nCopies(versions.size(), ""));
+        String currentVersion;
+        Double currentRating;
+        String nextVersion;
+        Double nextRating;
 
 // loop going forwards in time through the versions to fill ratings that are omitted because they have not changed
         for (int currentVersionIndex = versions.size()-1; currentVersionIndex >= 1; currentVersionIndex--) {
-            String currentVersion = versions.get(currentVersionIndex);
-            String currentRating = ratingsVersions.getOrDefault(currentVersion, "");
-            String nextVersion = versions.get(currentVersionIndex-1);
-            String nextRating = ratingsVersions.getOrDefault(nextVersion, "");
+            currentVersion = versions.get(currentVersionIndex);
+            currentRating = ratingsVersions.getOrDefault(currentVersion,Double.NaN);
+            nextVersion = versions.get(currentVersionIndex-1);
+            nextRating = ratingsVersions.getOrDefault(nextVersion,Double.NaN);
 
 // if current rating is not empty and next rating is not empty and the next rating is larger than the current rating
-            if (!currentRating.isEmpty() && !nextRating.isEmpty() &&
-Double.parseDouble(nextRating) > Double.parseDouble(currentRating)) {
-                ratingsVersions.put(nextVersion, currentRating);
-                newLists.set(currentVersionIndex, currentRating); // adding it to a newList
+            if (!currentRating.isNaN() && !nextRating.isNaN() && nextRating > currentRating) {
+                ratingsVersions.put(nextVersion,currentRating);
             }
 // else if the current rating is not empty and nextRating is empty
-            else if (!currentRating.isEmpty() && nextRating.isEmpty()) {
-                ratingsVersions.put(nextVersion, currentRating);
-                newLists.set(currentVersionIndex, currentRating);
-            }
-            else {
-                newLists.set(currentVersionIndex, currentRating);
+            else if (!currentRating.isNaN() && nextRating.isNaN()) {
+                ratingsVersions.put(nextVersion,currentRating);
             }
         }
 
 // Loops from the newest versions to the oldest versions filling in ratings before problem added to TPTP
         for (int currentVersionIndex = 0; currentVersionIndex < versions.size()-1; currentVersionIndex++) {
-            String currentVersion = versions.get(currentVersionIndex);
-            String currentRating = ratingsVersions.getOrDefault(currentVersion, "");
-            String prevVersion = versions.get(currentVersionIndex+1);
-            String prevRating = ratingsVersions.getOrDefault(prevVersion, "");
+            currentVersion = versions.get(currentVersionIndex);
+            currentRating = ratingsVersions.getOrDefault(currentVersion,Double.NaN);
+            nextVersion = versions.get(currentVersionIndex+1);
+            nextRating = ratingsVersions.getOrDefault(nextVersion,Double.NaN);
 
 // if the current rating is 1.00 and the previous rating is empty and can take 1.00, fill
-            if (prevRating.isEmpty() && currentRating.equals("1.00") &&
-prevVersion.compareTo(Main.FILL_1_BEFORE) <= 0 && prevVersion.compareTo(Main.NOTHING_BEFORE) >= 0) {
-                ratingsVersions.put(prevVersion, currentRating);
-                newLists.add(currentVersionIndex, currentRating);
+            if (nextRating.isNaN() && currentRating == 1.00 &&
+nextVersion.compareTo(Main.FILL_1_BEFORE) <= 0 && nextVersion.compareTo(Main.NOTHING_BEFORE) >= 0) {
+                ratingsVersions.put(nextVersion, currentRating);
             }
 // if the current rating is not 1.00 (must be less) and previous version is empty and can take less than 1.00, fill
-            else if (prevRating.isEmpty() && !currentRating.equals("1.00") &&
-prevVersion.compareTo(Main.FILL_LESS_THAN_1_BEFORE) <= 0 &&
-prevVersion.compareTo(Main.NOTHING_BEFORE) >= 0) {
-                ratingsVersions.put(prevVersion, currentRating);
-                newLists.add(currentVersionIndex, currentRating);
+            else if (nextRating.isNaN() && currentRating != 1.00 &&
+nextVersion.compareTo(Main.FILL_LESS_THAN_1_BEFORE) <= 0 &&
+nextVersion.compareTo(Main.NOTHING_BEFORE) >= 0) {
+                ratingsVersions.put(nextVersion, currentRating);
             }
         }
 
-        return sb.append(domain).append(",")
-                .append(problem).append(",")
-                .append(spc).append(",")
-                .append(String.join(",", newLists)).toString();
+        sb.append(domain).append(",").append(problem).append(",").append(spc).append(",");
+        for (String version: versions) {
+            sb.append(ratingsVersions.get(version)).append(",");
+        }
+        return sb.toString();
     }
-
 }

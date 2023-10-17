@@ -3,6 +3,5 @@ import java.util.Map;
 
 public class ExtractedData {
     String spc;
-    Map<String, String> ratingsVersions = new HashMap<>();
-
+    Map<String, Double> ratingsVersions = new HashMap<>();
 }
